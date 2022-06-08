@@ -3,7 +3,7 @@ module github.com/jspaleta/sensu-http-handler
 go 1.18
 
 require (
-	github.com/sensu/sensu-go/types v0.10.0
+	github.com/sensu/sensu-go/api/core/v2 v2.14.0
 	github.com/sensu/sensu-plugin-sdk v0.16.0
 )
 
@@ -25,7 +25,7 @@ require (
 	github.com/pelletier/go-toml v1.2.0 // indirect
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/sensu/sensu-go/api/core/v2 v2.14.0 // indirect
+	github.com/sensu/sensu-go/types v0.10.0 // indirect
 	github.com/sensu/sensu-licensing v0.1.2 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/afero v1.1.2 // indirect
