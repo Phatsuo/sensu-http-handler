@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
@@ -23,7 +24,9 @@ type Config struct {
 }
 
 var (
-	plugin = Config{
+	buf       bytes.Buffer
+	stdinCopy = io.TeeReader(os.Stdin, &buf)
+	plugin    = Config{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-http-handler",
 			Short:    "Proof of concept generic http handler",
@@ -79,9 +82,11 @@ var (
 )
 
 func main() {
-
-	check := sensu.NewHandler(&plugin.PluginConfig, options, checkArgs, executeCheck)
-	check.Execute()
+	handler := sensu.NewHandler(&plugin.PluginConfig, options, checkArgs, executeCheck)
+	//This handler is expected to be used with mutated events, and thus the json passed via stdin will not be a valid event
+	//Disable event reading and handle reading stdin elsewhere.
+	handler.DisableReadEvent()
+	handler.Execute()
 }
 
 func checkArgs(event *corev2.Event) error {
@@ -92,27 +97,31 @@ func checkArgs(event *corev2.Event) error {
 }
 
 func executeCheck(event *corev2.Event) error {
+	//stdinJSON, err := ioutil.ReadAll(stdinCopy)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: plugin.InsecureSkipVerify},
 	}
 	client := &http.Client{Transport: tr}
 
 	//Encode the data
-	postJSON, err := json.Marshal(event)
-	if err != nil {
-		return err
-	}
-	postBody := bytes.NewReader(postJSON)
-	request, err := http.NewRequest(plugin.Method, plugin.Url, postBody)
+	//postJSON, err := json.Marshal(event)
+	//if err != nil {
+	//	return err
+	//}
+	//postBody := bytes.NewReader(postJSON)
+	request, err := http.NewRequest(plugin.Method, plugin.Url, stdinCopy)
 	//Make request
 	request.Header.Set("Content-Type", "application/json")
 	for k, v := range plugin.Headers {
 		request.Header.Set(k, v)
 	}
 	if plugin.Verbose {
-		log.Println("sensu-http-handler --url", plugin.Url)
+		var buf bytes.Buffer
+		stdinCopy = io.TeeReader(os.Stdin, &buf)
+		log.Println("sensu-http-handler request url:", plugin.Url)
+		log.Println("sensu-http-handler request url:", plugin.Url)
 		for k, v := range request.Header {
-			log.Printf("sensu-http-handler request headers  %v : %v", k, v)
+			log.Printf("sensu-http-handler request headers:  %v :: %v", k, v)
 		}
 	}
 	_, err = client.Do(request)
