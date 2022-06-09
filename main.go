@@ -119,6 +119,9 @@ func sendRequest(event *corev2.Event) error {
 
 	//prep the request
 	request, err := http.NewRequest(plugin.Method, plugin.Url, requestBody)
+	if err != nil {
+		return err
+	}
 	//Make request
 	request.Header.Set("Content-Type", "application/json")
 	for k, v := range plugin.Headers {
