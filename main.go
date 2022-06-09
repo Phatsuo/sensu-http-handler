@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
@@ -24,9 +26,9 @@ type Config struct {
 }
 
 var (
-	buf       bytes.Buffer
-	stdinCopy = io.TeeReader(os.Stdin, &buf)
-	plugin    = Config{
+	buf         bytes.Buffer
+	requestBody io.Reader
+	plugin      = Config{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-http-handler",
 			Short:    "Proof of concept generic http handler",
@@ -82,10 +84,23 @@ var (
 )
 
 func main() {
-	handler := sensu.NewHandler(&plugin.PluginConfig, options, checkArgs, executeCheck)
+
+	handler := sensu.NewHandler(&plugin.PluginConfig, options, checkArgs, sendRequest)
 	//This handler is expected to be used with mutated events, and thus the json passed via stdin will not be a valid event
 	//Disable event reading and handle reading stdin elsewhere.
 	handler.DisableReadEvent()
+
+	//Lets check to see if stdin has content, if it does copy stdin into a new reader we can use
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		fmt.Printf("Error checking stdin: %v\n", err)
+		panic(err)
+	}
+	//Check the Mode bitmask for Named Pipe to indicate stdin is connected
+	if fi.Mode()&os.ModeNamedPipe != 0 {
+		requestBody = io.TeeReader(os.Stdin, &buf)
+	}
+	// execute the handler business logic: sendRequest
 	handler.Execute()
 }
 
@@ -96,33 +111,31 @@ func checkArgs(event *corev2.Event) error {
 	return nil
 }
 
-func executeCheck(event *corev2.Event) error {
-	//stdinJSON, err := ioutil.ReadAll(stdinCopy)
+func sendRequest(event *corev2.Event) error {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: plugin.InsecureSkipVerify},
 	}
 	client := &http.Client{Transport: tr}
 
-	//Encode the data
-	//postJSON, err := json.Marshal(event)
-	//if err != nil {
-	//	return err
-	//}
-	//postBody := bytes.NewReader(postJSON)
-	request, err := http.NewRequest(plugin.Method, plugin.Url, stdinCopy)
+	//prep the request
+	request, err := http.NewRequest(plugin.Method, plugin.Url, requestBody)
 	//Make request
 	request.Header.Set("Content-Type", "application/json")
 	for k, v := range plugin.Headers {
 		request.Header.Set(k, v)
 	}
 	if plugin.Verbose {
-		var buf bytes.Buffer
-		stdinCopy = io.TeeReader(os.Stdin, &buf)
-		log.Println("sensu-http-handler request url:", plugin.Url)
 		log.Println("sensu-http-handler request url:", plugin.Url)
 		for k, v := range request.Header {
-			log.Printf("sensu-http-handler request headers:  %v :: %v", k, v)
+			log.Printf("sensu-http-handler request header:  %v :: %v", k, v)
 		}
+		var buf bytes.Buffer
+		var requestBodyBytes []byte
+		if requestBody != nil {
+			requestBodyCopy := io.TeeReader(requestBody, &buf)
+			requestBodyBytes, _ = ioutil.ReadAll(requestBodyCopy)
+		}
+		log.Println("sensu-http-handler request body:", strings.TrimSpace(string(requestBodyBytes)))
 	}
 	_, err = client.Do(request)
 	return err
