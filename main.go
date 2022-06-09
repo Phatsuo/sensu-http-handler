@@ -38,7 +38,6 @@ var (
 
 	options = []sensu.ConfigOption{
 		&sensu.PluginConfigOption[string]{
-			Path:      "url",
 			Env:       "HTTP_HANDLER_URL",
 			Argument:  "url",
 			Shorthand: "u",
@@ -47,7 +46,6 @@ var (
 			Value:     &plugin.Url,
 		},
 		&sensu.PluginConfigOption[string]{
-			Path:      "method",
 			Env:       "HTTP_HANDLER_METHOD",
 			Argument:  "method",
 			Shorthand: "m",
@@ -57,7 +55,6 @@ var (
 			Value:     &plugin.Method,
 		},
 		&sensu.PluginConfigOption[bool]{
-			Path:      "insecure-skip-verify",
 			Env:       "HTTP_HANDLER_INSECURE_SKIP_VERIFY",
 			Argument:  "insecure-skip-verify",
 			Shorthand: "",
@@ -66,10 +63,9 @@ var (
 			Value:     &plugin.InsecureSkipVerify,
 		},
 		&sensu.PluginConfigOption[bool]{
-			Path:      "verbose",
 			Env:       "HTTP_HANDLER_VERBOSE",
 			Argument:  "verbose",
-			Shorthand: "",
+			Shorthand: "v",
 			Default:   false,
 			Usage:     "Verbose logging",
 			Value:     &plugin.Verbose,
