@@ -13,6 +13,7 @@ import (
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
+    "github.com/sensu/sensu-plugin-sdk/templates"
 )
 
 // Config represents the check plugin config.
@@ -54,6 +55,14 @@ var (
 			Usage:     "The http(s) method: POST and PATCH supported",
 			Value:     &plugin.Method,
 		},
+		&sensu.PluginConfigOption[string]{
+			Env:       "HTTP_POST_DATA",
+			Argument:  "data",
+			Shorthand: "d",
+			Default:   "",
+			Usage:     "The post data",
+			Value:     &plugin.PostData,
+		},		
 		&sensu.PluginConfigOption[bool]{
 			Env:       "HTTP_HANDLER_INSECURE_SKIP_VERIFY",
 			Argument:  "insecure-skip-verify",
@@ -86,16 +95,6 @@ func main() {
 	//Disable event reading and handle reading stdin elsewhere.
 	handler.DisableReadEvent()
 
-	//Lets check to see if stdin has content, if it does copy stdin into a new reader we can use
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		fmt.Printf("Error checking stdin: %v\n", err)
-		panic(err)
-	}
-	//Check the Mode bitmask for Named Pipe to indicate stdin is connected
-	if fi.Mode()&os.ModeNamedPipe != 0 {
-		requestBody = io.TeeReader(os.Stdin, &buf)
-	}
 	// execute the handler business logic: sendRequest
 	handler.Execute()
 }
@@ -112,6 +111,25 @@ func sendRequest(event *corev2.Event) error {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: plugin.InsecureSkipVerify},
 	}
 	client := &http.Client{Transport: tr}
+
+
+	postData, err := templates.EvalTemplate("postData", plugin.PostData, event)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate template %s: %v", plugin.PostData, err)
+	}
+
+	requestBody := strings.NewReader(postData)
+
+	buffer := make([]byte, 10)
+    for {
+        count, err := requestBody.Read(buffer)
+        if err != nil {
+            if err != io.EOF {
+                fmt.Println(err)
+            }
+            break
+        }
+    }
 
 	//prep the request
 	request, err := http.NewRequest(plugin.Method, plugin.Url, requestBody)
