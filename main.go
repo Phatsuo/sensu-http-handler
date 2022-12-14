@@ -8,12 +8,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
 	"github.com/sensu/sensu-plugin-sdk/sensu"
-    "github.com/sensu/sensu-plugin-sdk/templates"
+	"github.com/sensu/sensu-plugin-sdk/templates"
 )
 
 // Config represents the check plugin config.
@@ -27,9 +26,7 @@ type Config struct {
 }
 
 var (
-	buf         bytes.Buffer
-	requestBody io.Reader
-	plugin      = Config{
+	plugin = Config{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-http-handler",
 			Short:    "Proof of concept generic http handler",
@@ -62,7 +59,7 @@ var (
 			Default:   "",
 			Usage:     "The post data",
 			Value:     &plugin.PostData,
-		},		
+		},
 		&sensu.PluginConfigOption[bool]{
 			Env:       "HTTP_HANDLER_INSECURE_SKIP_VERIFY",
 			Argument:  "insecure-skip-verify",
@@ -112,24 +109,23 @@ func sendRequest(event *corev2.Event) error {
 	}
 	client := &http.Client{Transport: tr}
 
-
 	postData, err := templates.EvalTemplate("postData", plugin.PostData, event)
 	if err != nil {
-		return "", fmt.Errorf("failed to evaluate template %s: %v", plugin.PostData, err)
+		return fmt.Errorf("failed to evaluate template %s: %v", plugin.PostData, err)
 	}
 
 	requestBody := strings.NewReader(postData)
 
 	buffer := make([]byte, 10)
-    for {
-        count, err := requestBody.Read(buffer)
-        if err != nil {
-            if err != io.EOF {
-                fmt.Println(err)
-            }
-            break
-        }
-    }
+	for {
+		count, err := requestBody.Read(buffer)
+		if err != nil {
+			if err != io.EOF {
+				fmt.Println(err)
+			}
+			break
+		}
+	}
 
 	//prep the request
 	request, err := http.NewRequest(plugin.Method, plugin.Url, requestBody)
