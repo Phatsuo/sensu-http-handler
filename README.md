@@ -46,7 +46,7 @@ This allows you to add headers using a `key=value` pattern. You can use this mul
 |Argument   |Environment Variable |
 |-----------|---------------------|
 |--url      |HTTP_HANDLER_URL     |
-|--method   |HTP_HANDLER_METHOD   |
+|--method   |HTTP_HANDLER_METHOD   |
 
 
 ## **Note**
