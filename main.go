@@ -20,6 +20,7 @@ type Config struct {
 	sensu.PluginConfig
 	Url                string
 	Method             string
+	PostData           string
 	InsecureSkipVerify bool
 	Verbose            bool
 	Headers            map[string]string
@@ -118,7 +119,7 @@ func sendRequest(event *corev2.Event) error {
 
 	buffer := make([]byte, 10)
 	for {
-		count, err := requestBody.Read(buffer)
+		_, err := requestBody.Read(buffer)
 		if err != nil {
 			if err != io.EOF {
 				fmt.Println(err)
