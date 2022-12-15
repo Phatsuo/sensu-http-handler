@@ -115,14 +115,14 @@ func sendRequest(event *corev2.Event) error {
 		log.Println("plugin.PostData", plugin.PostData)
 	}
 
-	if event == nil {
+	/*if event == nil {
 		// this should only happen in the test environment
 		event = new(corev2.Event)
 		event.Entity = new(corev2.Entity)
 		event.Entity.Name = "EntityName"
 		event.Check = new(corev2.Check)
 		event.Check.Name = "CheckName"
-	}
+	}*/
 
 	postData, err := templates.EvalTemplate("postData", plugin.PostData, event)
 	if err != nil {
