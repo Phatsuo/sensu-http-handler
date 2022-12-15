@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
@@ -110,6 +111,19 @@ func sendRequest(event *corev2.Event) error {
 	}
 	client := &http.Client{Transport: tr}
 
+	if plugin.Verbose {
+		log.Println("plugin.PostData", plugin.PostData)
+	}
+
+	if event == nil {
+		// this should only happen in the test environment
+		event = new(corev2.Event)
+		event.Entity = new(corev2.Entity)
+		event.Entity.Name = "EntityName"
+		event.Check = new(corev2.Check)
+		event.Check.Name = "CheckName"
+	}
+
 	postData, err := templates.EvalTemplate("postData", plugin.PostData, event)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate template %s: %v", plugin.PostData, err)
@@ -117,28 +131,24 @@ func sendRequest(event *corev2.Event) error {
 
 	requestBody := strings.NewReader(postData)
 
-	buffer := make([]byte, 10)
-	for {
-		_, err := requestBody.Read(buffer)
-		if err != nil {
-			if err != io.EOF {
-				fmt.Println(err)
-			}
-			break
-		}
-	}
-
-	//prep the request
-	request, err := http.NewRequest(plugin.Method, plugin.Url, requestBody)
+	// Prep the request
+	request, err := http.NewRequest(plugin.Method, plugin.Url, strings.NewReader(postData))
 	if err != nil {
 		return err
 	}
-	//Make request
+
+	// Make request
 	request.Header.Set("Content-Type", "application/json")
+
+	var length = len([]rune(postData))
+
+	request.Header.Set("Content-Length", strconv.Itoa(length))
 	for k, v := range plugin.Headers {
 		request.Header.Set(k, v)
 	}
+
 	if plugin.Verbose {
+		log.Println("plugin.Method: ", plugin.Method)
 		log.Println("sensu-http-handler request url:", plugin.Url)
 		for k, v := range request.Header {
 			log.Printf("sensu-http-handler request header:  %v :: %v", k, v)
@@ -151,6 +161,17 @@ func sendRequest(event *corev2.Event) error {
 		}
 		log.Println("sensu-http-handler request body:", strings.TrimSpace(string(requestBodyBytes)))
 	}
-	_, err = client.Do(request)
+
+	response, err := client.Do(request)
+
+	if plugin.Verbose && response != nil {
+		fmt.Println("response.StatusCode: ", response.StatusCode)
+	}
+
+	if err != nil {
+		fmt.Println("Error accessing endpoint")
+		fmt.Println(err)
+	}
+
 	return err
 }
