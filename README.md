@@ -26,6 +26,7 @@ Flags:
       --insecure-skip-verify    Skip TLS verifications for https urls
   -m, --method string           The http(s) method: POST and PATCH supported (default "POST")
   -u, --url string              The http(s) url
+  -d, --data                    The data to pass, will be treated as a template
   -v, --verbose                 Verbose logging
 
 ```
