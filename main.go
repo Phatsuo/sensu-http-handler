@@ -88,13 +88,7 @@ var (
 )
 
 func main() {
-
 	handler := sensu.NewHandler(&plugin.PluginConfig, options, checkArgs, sendRequest)
-	//This handler is expected to be used with mutated events, and thus the json passed via stdin will not be a valid event
-	//Disable event reading and handle reading stdin elsewhere.
-	handler.DisableReadEvent()
-
-	// execute the handler business logic: sendRequest
 	handler.Execute()
 }
 
