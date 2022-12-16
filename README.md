@@ -51,7 +51,6 @@ The POST or PATCH body. Treated as a Sensu template and processed with the event
 |-----------|---------------------|
 |--url      |HTTP_HANDLER_URL     |
 |--method   |HTTP_HANDLER_METHOD  |
-|-----------|---------------------|
 
 
 ## What it's suppose to do.
